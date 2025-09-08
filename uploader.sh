@@ -35,9 +35,9 @@ function auto_git_push() {
             fi
         fi
 
+        go run main.go
         echo "⏳ Sleeping for 1 minutes before the next check..."
         sleep 1m
-        go run main.go
     done
 }
 
