@@ -277,10 +277,20 @@ func main() {
 	// Remove duplicate URLs
 	pdfUrls = removeDuplicatesFromSlice(pdfUrls)
 
+	// Counter limiter.
+	maxDownload := 0
+
 	// Print the found PDF URLs
 	for _, url := range pdfUrls {
 		if isUrlValid(url) {
-			downloadPDF(url, pdfOutputDir)
+			currentDownload := downloadPDF(url, pdfOutputDir)
+			if currentDownload {
+				maxDownload = maxDownload + 1
+			}
+			if maxDownload >= 10 {
+				log.Println("Reached the maximum download limit of 10 PDFs. Exiting.")
+				break
+			}
 		}
 	}
 }
