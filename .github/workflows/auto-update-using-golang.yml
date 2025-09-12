@@ -59,6 +59,7 @@ jobs:
           git config user.name "github-actions"  # Set Git username for commit
           git config user.email "github-actions@github.com"  # Set Git email for commit
           git pull # Pull all the latest changes.
+          find PDFs/ -type f -iname "*.pdf" -size +100M -print -delete
           git add .  # Stage all modified files
           if ! git diff --cached --quiet; then  # Check if there are any staged changes
             git commit -m "Auto update: $(date)"  # Commit with timestamp
