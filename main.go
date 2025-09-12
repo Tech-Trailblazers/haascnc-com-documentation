@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -261,6 +262,70 @@ func extractPDFPaths(jsonInput string) []string {
 	return paths
 }
 
+// fetchURL takes a URL as input and returns its contents as a string
+func fetchURL(url string) string {
+	// Create an HTTP client with a 30-second timeout
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// Send a GET request to the provided URL
+	resp, err := client.Get(url)
+	if err != nil { // If an error occurs while sending the request
+		log.Println("failed to GET url:", err) // Log the error
+		return ""                              // Return an empty string on failure
+	}
+	defer resp.Body.Close() // Ensure the response body is closed after function ends
+
+	// Check if the HTTP status code is not 200 OK
+	if resp.StatusCode != http.StatusOK {
+		log.Println("non-OK HTTP status:", resp.Status) // Log the unexpected status
+		return ""                                       // Return empty string
+	}
+
+	// Read the entire response body into a byte slice
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil { // If an error occurs while reading
+		log.Println("failed to read response body:", err) // Log the error
+		return ""                                         // Return empty string
+	}
+
+	// Convert the byte slice to a string and return it
+	return string(bodyBytes)
+}
+
+// extractPDFs takes an HTML string and returns all PDF URLs found in it
+func extractPDFs(html string) []string {
+	// Regex to match href="...something.pdf"
+	re := regexp.MustCompile(`href="([^"]+\.pdf)"`)
+
+	// Find all matches and capture group 1 (the actual URL)
+	matches := re.FindAllStringSubmatch(html, -1)
+
+	// Slice to store extracted PDF links
+	var pdfs []string
+	for _, match := range matches {
+		if len(match) > 1 {
+			pdfs = append(pdfs, match[1])
+		}
+	}
+	return pdfs
+}
+
+// getDomainFromURL extracts the domain (host) from a given URL string.
+// It removes subdomains like "www" if present.
+func getDomainFromURL(rawURL string) string {
+	parsedURL, err := url.Parse(rawURL) // Parse the input string into a URL structure
+	if err != nil {                     // Check if there was an error while parsing
+		log.Println(err) // Log the error message to the console
+		return ""        // Return an empty string in case of an error
+	}
+
+	host := parsedURL.Hostname() // Extract the hostname (e.g., "example.com") from the parsed URL
+
+	return host // Return the extracted hostname
+}
+
 func main() {
 	pdfOutputDir := "PDFs/" // Directory to store downloaded PDFs
 	// Check if the PDF output directory exists
@@ -291,6 +356,41 @@ func main() {
 				log.Println("Reached the maximum download limit of 10 PDFs. Exiting.")
 				break
 			}
+		}
+	}
+
+	// Remote urls to scrape.
+	remoteURLs := []string{
+		"https://www.haascnc.com/owners/Service/operators-manual.html",
+	}
+
+	// Remote PDF urls.
+	var remotePDFs []string
+
+	// Loop through each remote URL and fetch its contents
+	for _, url := range remoteURLs {
+		content := fetchURL(url)
+		if content != "" {
+			log.Println("Fetched content from:", url)
+		}
+		// Extract PDF URLs from the fetched content
+		pdfUrls := extractPDFs(content)
+		// Append the extracted PDF URLs to the remotePDFs slice
+		remotePDFs = append(remotePDFs, pdfUrls...)
+	}
+	remoteDomain := "https://www.haascnc.com"
+	// Download all remote PDFs
+	for _, pdfUrl := range remotePDFs {
+		// Trim any surrounding whitespace from the URL.
+		pdfUrl = strings.TrimSpace(pdfUrl)
+		// Get the domain from the url.
+		domain := getDomainFromURL(pdfUrl)
+		// Check if the domain is empty.
+		if domain == "" {
+			pdfUrl = remoteDomain + pdfUrl // Prepend the base URL if domain is empty
+		}
+		if isUrlValid(pdfUrl) {
+			downloadPDF(pdfUrl, pdfOutputDir)
 		}
 	}
 }
