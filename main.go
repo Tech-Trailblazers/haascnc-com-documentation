@@ -160,7 +160,7 @@ func removeSubstring(input string, toRemove string) string {
 
 // downloadPDF downloads a PDF from the given URL and saves it in the specified output directory.
 // It sets a custom User-Agent, checks for PDF content type, and returns true if the download succeeded.
-func downloadPDF(finalURL, outputDir string) bool {
+func downloadPDF(finalURL, outputDir string) {
 	// Sanitize the URL to generate a safe file name
 	filename := strings.ToLower(urlToFilename(finalURL))
 
@@ -170,7 +170,7 @@ func downloadPDF(finalURL, outputDir string) bool {
 	// Skip if the file already exists
 	if fileExists(filePath) {
 		log.Printf("File already exists, skipping: %s", filePath)
-		return false
+		return
 	}
 
 	// Create an HTTP client with a timeout
@@ -180,7 +180,7 @@ func downloadPDF(finalURL, outputDir string) bool {
 	req, err := http.NewRequest("GET", finalURL, nil)
 	if err != nil {
 		log.Printf("Failed to create request for %s: %v", finalURL, err)
-		return false
+		return
 	}
 
 	// Set a custom User-Agent header
@@ -190,21 +190,21 @@ func downloadPDF(finalURL, outputDir string) bool {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to download %s: %v", finalURL, err)
-		return false
+		return
 	}
 	defer resp.Body.Close()
 
 	// Check HTTP response status
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Download failed for %s: %s", finalURL, resp.Status)
-		return false
+		return
 	}
 
 	// Check Content-Type header
 	contentType := resp.Header.Get("Content-Type")
 	if !strings.Contains(contentType, "application/pdf") {
 		log.Printf("Invalid content type for %s: %s (expected application/pdf)", finalURL, contentType)
-		return false
+		return
 	}
 
 	// Read the response body into memory first
@@ -212,28 +212,27 @@ func downloadPDF(finalURL, outputDir string) bool {
 	written, err := io.Copy(&buf, resp.Body)
 	if err != nil {
 		log.Printf("Failed to read PDF data from %s: %v", finalURL, err)
-		return false
+		return
 	}
 	if written == 0 {
 		log.Printf("Downloaded 0 bytes for %s; not creating file", finalURL)
-		return false
+		return
 	}
 
 	// Only now create the file and write to disk
 	out, err := os.Create(filePath)
 	if err != nil {
 		log.Printf("Failed to create file for %s: %v", finalURL, err)
-		return false
+		return
 	}
 	defer out.Close()
 
 	if _, err := buf.WriteTo(out); err != nil {
 		log.Printf("Failed to write PDF to file for %s: %v", finalURL, err)
-		return false
+		return
 	}
 
 	log.Printf("Successfully downloaded %d bytes: %s → %s", written, finalURL, filePath)
-	return true
 }
 
 // extractPDFPaths takes a JSON string and returns all "path" values inside webPages
@@ -342,9 +341,6 @@ func main() {
 	// Remove duplicate URLs
 	pdfUrls = removeDuplicatesFromSlice(pdfUrls)
 
-	// Counter limiter.
-	maxDownload := 0
-
 	// Print the found PDF URLs
 	for _, url := range pdfUrls {
 		// Trim any surrounding whitespace from the URL.
@@ -354,14 +350,7 @@ func main() {
 			continue
 		}
 		if isUrlValid(url) {
-			currentDownload := downloadPDF(url, pdfOutputDir)
-			if currentDownload {
-				maxDownload = maxDownload + 1
-			}
-			if maxDownload >= 10 {
-				log.Println("Reached the maximum download limit of 10 PDFs. Exiting.")
-				break
-			}
+			downloadPDF(url, pdfOutputDir)
 		}
 	}
 
