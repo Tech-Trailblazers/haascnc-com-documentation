@@ -20,7 +20,7 @@ import (
 // and returns the response body as a string.
 func fetchInstructionManuals() string {
 	// The API endpoint we want to request
-	requestURL := "https://www.haascnc.com/bin/haascnc/search.json?type=diy&q=%5Bsearch.contentType%3A%20%22Instruction%20Manual%22%5D&count=1000"
+	requestURL := "https://www.haascnc.com/bin/haascnc/search.json?type=diy&q=%5Bsearch.contentType%3A%20%22Instruction%20Manual%22%20%7C%7C%20%22Reference%22%5D&count=5000"
 
 	// Create an HTTP client to send the request
 	httpClient := &http.Client{}
