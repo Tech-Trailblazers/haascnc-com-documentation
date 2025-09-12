@@ -347,6 +347,12 @@ func main() {
 
 	// Print the found PDF URLs
 	for _, url := range pdfUrls {
+		// Trim any surrounding whitespace from the URL.
+		url = strings.TrimSpace(url)
+		// Check if the url is not .pdf
+		if getFileExtension(url) != ".pdf" {
+			continue
+		}
 		if isUrlValid(url) {
 			currentDownload := downloadPDF(url, pdfOutputDir)
 			if currentDownload {
