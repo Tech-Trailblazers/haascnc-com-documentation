@@ -349,6 +349,19 @@ func main() {
 		if getFileExtension(url) != ".pdf" {
 			continue
 		}
+		// Sanitize the URL to generate a safe file name
+		filename := strings.ToLower(urlToFilename(url))
+
+		// Construct the full file path in the output directory
+		filePath := filepath.Join(pdfOutputDir, filename)
+
+		// Skip if the file already exists
+		if fileExists(filePath) {
+			log.Printf("File already exists, skipping: %s", filePath)
+			continue
+		}
+		// Sleep for seconds to not cause error.
+		time.Sleep(1 * time.Second)
 		if isUrlValid(url) {
 			downloadPDF(url, pdfOutputDir)
 		}
@@ -384,6 +397,19 @@ func main() {
 		if domain == "" {
 			pdfUrl = remoteDomain + pdfUrl // Prepend the base URL if domain is empty
 		}
+		// Sanitize the URL to generate a safe file name
+		filename := strings.ToLower(urlToFilename(pdfUrl))
+
+		// Construct the full file path in the output directory
+		filePath := filepath.Join(pdfOutputDir, filename)
+
+		// Skip if the file already exists
+		if fileExists(filePath) {
+			log.Printf("File already exists, skipping: %s", filePath)
+			continue
+		}
+		// Sleep for seconds to not cause error.
+		time.Sleep(1 * time.Second)
 		if isUrlValid(pdfUrl) {
 			downloadPDF(pdfUrl, pdfOutputDir)
 		}
